@@ -1,0 +1,286 @@
+---
+title: "Homework03 for STAT 545- Use dplyr/ggplot2 to manipulate and explore data"
+output: 
+  html_document:
+    keep_md: true
+    
+---
+
+### Loading Data frame into R markdown
+
+The following packages were loaded into Markdown:
+1. Gapminder, which was used as the data frame for the assignment
+2. Tidyverse, contains all the dpyr and ggplot2 functions
+3. kableExtra
+4. gridExtra
+
+```{r}
+library(gapminder)
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+```
+
+### Task1: Max and Min GDP per capita for all continents
+
+##### **Data Manipulation using dplyr**
+
+The gapminder data frame was further grouped into a small data frame named `a`. `knitr::kable` was used to generate a table.
+
+```{r}
+a <- gapminder %>% # call data frame
+  group_by(continent) %>% #group by continent
+  summarise(min = min(gdpPercap),
+         max = max(gdpPercap)) %>% # calculating max and min GDP per cap
+  rename(Min_gdpPercap = min, Max_gdpPercap = max) 
+
+kable(a, formart = "markdown") %>% 
+kable_styling(bootstrap_options = c("striped")) # output in the form of table
+```
+
+
+
+The above output shows that Asia has the highest maximum gdpPercap while Africa has the lowest minimum gdpPercap. It can be visualised clearly using plots.
+
+###### **Data Visualisation using ggplot**
+
+Bar plots were used to visualise the data set obtained above.
+
+```{r}
+p1 <- ggplot(a, aes(continent, Min_gdpPercap, label = Min_gdpPercap)) +
+  geom_bar(stat = 'identity', position = 'dodge', aes(fill =continent), color= "black", show.legend = FALSE)+
+  labs(title = "Minimum GDP per capita within the continents") # barplot for continent vs min GDP
+
+p2 <- ggplot(a, aes(continent, Max_gdpPercap, label = Max_gdpPercap)) +
+  geom_bar(stat = 'identity', position = 'dodge', aes(fill =continent), color= "black", show.legend = FALSE)+
+  labs(title = "Maximum GDP per capita within the continents") #barplot of continent vs Max GDP
+
+grid.arrange(p1, p2, ncol=2) #arrange two plots side by side
+
+```
+
+
+
+The `first graph` shows that Oceania has the highest minimum GDP per capita and Africa has the lowest. The `second graph` shows that Asia has the highest maximum GDP per capita and Africa has the lowest. 
+
+Overall, Africa has the lowest GDP per capita of all continents and Oceania has the highest.
+
+### Task2: Spread of GDP per capita within continents
+
+
+##### **Data Manipulation using dplyr**
+
+
+Firstly, summary stats fucntions were used to have an idea about the spread of GDP per capita for each continent. The table bellow gives the mean and standard deviation within the continents.
+
+
+```{r}
+b <- gapminder %>% #call data frame
+  group_by(continent) %>% #group by continent
+  summarise(mean_gdpPercap = mean(gdpPercap),
+            SD_gdpPercap = sd(gdpPercap)) #obtain the spread of gdp per capita
+kable(b, formart = "markdown") %>% 
+  kable_styling(bootstrap_options = c("striped")) #output in the form of table
+
+```
+
+
+
+
+##### **Data Visualisation using ggplot**
+
+
+```{r}
+
+ggplot(b) +
+  geom_bar(aes(continent, mean_gdpPercap, fill = "red"), stat = 'identity', position = 'dodge', show.legend = FALSE) +
+  geom_bar(aes(continent, SD_gdpPercap, fill = "blue"), stat = 'identity', position = 'dodge', show.legend = FALSE)+
+  ylab("mean_gdpPercap & SD_gdpPercap")+
+  labs(title = "Summary stats of GDP per capita within the continents") #visualising the table obtained above in the form of bar plots
+
+```
+
+
+
+In the above plot, the `red` bars are for `mean GDP per capita` and `blue` bars for `standard deviation`.
+
+
+
+##### **Alternative method for data visualidation**
+
+`Facet` was used to have a clear picture of the spread of GDP per capita within the continents. 
+
+```{r}
+gapminder %>% #call data frame
+  ggplot(aes(gdpPercap)) +
+  facet_wrap(~continent) +
+  geom_histogram(aes(fill=country), show.legend = FALSE) #facet plot
+```
+
+
+It is clear from the above output that GDP per capita for Oceania varies the least while Africa has the maximum variation.
+
+The point made above was also justified using the plot below which proves the statement made above.
+
+```{r}
+gapminder %>% 
+  ggplot(aes(continent, gdpPercap)) +
+  scale_y_log10() +
+  geom_violin(width = 1.30) + 
+  geom_jitter(aes(color = continent), width = 0.2)+
+  labs(title = "Spread of GDP per capita within the continens") #title of the plot
+
+```
+
+
+
+
+### Task3: Summary Stat of lifeExp variable of the Data frame
+
+
+##### **Data Manipulation using dplyr**
+
+
+For this task, `Trimmed Mean` (with trim factor of 50%) and `Weighted Mean` were compared to the actual mean of lifeExp for each continent.
+
+```{r}
+d <- gapminder %>% 
+  group_by(continent, year) %>% 
+  summarise(Trimmed_mean = mean(lifeExp, trim=0.5),
+            median = median(lifeExp),
+            Mean = mean(lifeExp),
+            Weighted_mean = weighted.mean(lifeExp,pop)) #trimmed, weighted and avg mean
+
+kable(d, formart = "markdown") %>% 
+kable_styling(bootstrap_options = c("striped")) #output in the form of table
+
+```
+
+
+
+One interesting observation was made here. The `Trimmed Mean` and the `Median` for each continent are exactly the same which means that if we trim the data by 50% from both sides then it gives us the `Median`.
+
+
+
+
+##### **Data Visualisation using ggplot**
+
+The following graphs compares the three types of mean for each continent.
+
+```{r}
+g1 <- ggplot(d) +
+  geom_point(aes(year, Trimmed_mean, fill = continent)) +
+  geom_line(aes(year, Trimmed_mean, color = continent))+
+  labs(title = "Variation of LifeExp over time")
+
+g2 <- ggplot(d) +
+  geom_point(aes(year, Mean, fill = continent)) +
+  geom_line(aes(year, Mean, color = continent))
+
+g3 <- ggplot(d) +
+  geom_point(aes(year, Weighted_mean, fill = continent)) +
+  geom_line(aes(year, Weighted_mean, color = continent))
+
+grid.arrange(g1, g2, g3, nrow=3)
+```
+
+
+
+An **important obseration** made here is that, `mean lifeExp` of Oceania was always high in all the three cases. It also proves the fact that `GDP per capita` and `lifeExp` have a `positive relation` as obtained from the output of Task2 that the mean GDP per capita of Oceania was the highest.
+
+
+# Task4: LifeExp changing over time for different continents
+
+
+
+##### **Data Manipulation using dplyr**
+
+The average life expectancy was obtained using dplyr for each continent over the years and the output obtained was presented below.
+
+```{r}
+e <- gapminder %>% 
+  group_by(continent, year) %>% 
+  summarise(Mean_lifeExp = mean(lifeExp))
+kable(e, formart = "markdown") %>% 
+kable_styling(bootstrap_options = c("striped"))
+            
+```
+
+
+
+
+##### **Data Visualisation using ggplot**
+
+
+Facet was used to visualise the above obtaibed results. It was observed that `the average lifeExp of Europe and Oceania was greater than the rest of the continents`. This also complies with the fact that these two continents had the highest GDP per capita of all.
+
+```{r}
+ggplot(e, aes(year, Mean_lifeExp)) +
+  facet_wrap(~continent)+
+  geom_line(aes(color = continent))
+```
+
+
+
+### Task5: Finding interesting stories
+
+
+Obaining the mean lifeExp of all the countries in Europe.
+
+```{r}
+f <- gapminder %>% 
+  filter(continent == "Europe") %>% 
+  group_by(country) %>% 
+  summarise(mean_lifeExp = mean(lifeExp))
+knitr::kable(f)
+```
+
+
+
+
+**Lets find out the country that has the maximum average lifeExp?** 
+
+
+
+
+```{r}
+summarise(f, max_lifeExp = max(mean_lifeExp))
+```
+ 
+ 
+ It seems **Iceland** has the highest mean lifeExp of all the countries in Europe.:open_mouth:
+ 
+ 
+ `What happend to Germany?`
+ 
+ 
+ 
+ Lets compare this with the lifeExp of my country, **India** 
+ 
+ 
+```{r}
+h <- gapminder %>% 
+  filter(continent == "Asia") %>% 
+  group_by(country) %>% 
+  summarise(mean_lifeExp = mean(lifeExp))
+knitr::kable(h)
+```
+ 
+```{r}
+knitr::kable(h[h$country == "India",])
+```
+ 
+
+
+
+
+*Woooowwww*, looks like India's mean lifeExp is less than that of Iceland. 
+
+
+
+#### **Interesting!!!** 
+
+
+
+ 
+ 
